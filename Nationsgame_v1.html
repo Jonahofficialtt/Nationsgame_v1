@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Flag Battle Game</title>
+  <style>
+    body {
+      background: #1e1e1e;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      overflow: hidden;
+      margin: 0;
+      padding: 20px;
+    }
+    .game-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .setup-screen {
+      margin-bottom: 20px;
+      max-width: 600px;
+    }
+    .country-input {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 15px;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 250px;
+    }
+    input {
+      padding: 8px;
+      margin-top: 5px;
+      border-radius: 4px;
+      border: none;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .country-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 5px;
+      margin-top: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+      padding: 5px;
+      width: 100%;
+    }
+    .country-option {
+      padding: 5px 10px;
+      background: #333;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      flex: 1 0 calc(50% - 10px);
+      min-width: 120px;
+      box-sizing: border-box;
+      text-align: center;
+    }
+    .country-option:hover {
+      background: #444;
+    }
+    button {
+      padding: 10px 20px;
+      background: #00f0ff;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #00c0d0;
+    }
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    canvas {
+      background: #2e2e2e;
+      border: 2px solid #00f0ff;
+      display: none;
+    }
+    .hp-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 10px;
+      display: none;
+    }
+    .hp-label {
+      font-weight: bold;
+      width: 120px;
+      text-align: right;
+    }
+    .hp-bar {
+      height: 20px;
+      width: 250px;
+      background: #444;
+      border: 2px solid #999;
+      position: relative;
+    }
+    .hp-fill {
+      height: 100%;
+      background: limegreen;
+      transition: width 0.3s;
+    }
+    .effect {
+      position: absolute;
+      pointer-events: none;
+      animation: fadeOut 1s forwards;
+      font-weight: bold;
+      font-size: 18px;
+      text-shadow: 1px 1px 2px black;
+    }
+    @keyframes fadeOut {
+      to {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+    }
+    .error {
+      color: red;
+      margin-top: 10px;
+      display: none;
+    }
+    .loading {
+      color: #00f0ff;
+      margin-top: 10px;
+    }
+    .speed-display {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #aaa;
+    }
+    .end-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      display: none;
+      z-index: 10;
+    }
+    .end-message {
+      font-size: 48px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      text-shadow: 2px 2px 4px #000;
+    }
+    .restart-button {
+      padding: 15px 30px;
+      font-size: 20px;
+      background: #00f0ff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <div class="setup-screen">
+      <h2>Flag Battle Game</h2>
+      <div class="country-input">
+        <div class="input-group">
+          <label for="country1">Country 1:</label>
+          <input type="text" id="country1" placeholder="Search country..." value="Italy">
+          <div class="country-list" id="country1-list"></div>
+        </div>
+        <div class="input-group">
+          <label for="country2">Country 2:</label>
+          <input type="text" id="country2" placeholder="Search country..." value="France">
+          <div class="country-list" id="country2-list"></div>
+        </div>
+      </div>
+      <div class="loading" id="loadingMessage">Loading flags...</div>
+      <button id="startButton">Start Game</button>
+      <div class="error" id="errorMessage">Could not load some flag images. The game will use default colors instead.</div>
+    </div>
+    
+    <h2 id="gameTitle" style="display: none;"></h2>
+    <div class="hp-container" id="hp-country1-container">
+      <div class="hp-label" id="country1-label"></div>
+      <div class="hp-bar" id="hp-country1"><div class="hp-fill" style="width: 100%"></div></div>
+    </div>
+    <div class="hp-container" id="hp-country2-container">
+      <div class="hp-label" id="country2-label"></div>
+      <div class="hp-bar" id="hp-country2"><div class="hp-fill" style="width: 100%"></div></div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <div class="speed-display" id="speedDisplay" style="display: none;">Speed: 2.0</div>
+    
+    <div class="end-screen" id="endScreen">
+      <div class="end-message" id="endMessage"></div>
+      <button class="restart-button" id="restartButton">Play Again</button>
+    </div>
+    
+    <audio id="hitSound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
+    <audio id="explosionSound" src="https://www.soundjay.com/button/beep-10.wav"></audio>
+    <audio id="healSound" src="https://www.soundjay.com/button/beep-01.wav"></audio>
+  </div>
+
+  <script>
+    // Schengen countries + popular travel destinations with Italian passport
+    const countries = [
+      // Schengen Area
+      { name: "Austria", code: "AT", emoji: "🇦🇹" },
+      { name: "Belgium", code: "BE", emoji: "🇧🇪" },
+      { name: "Croatia", code: "HR", emoji: "🇭🇷" },
+      { name: "Czech Republic", code: "CZ", emoji: "🇨🇿" },
+      { name: "Denmark", code: "DK", emoji: "🇩🇰" },
+      { name: "Estonia", code: "EE", emoji: "🇪🇪" },
+      { name: "Finland", code: "FI", emoji: "🇫🇮" },
+      { name: "France", code: "FR", emoji: "🇫🇷" },
+      { name: "Germany", code: "DE", emoji: "🇩🇪" },
+      { name: "Greece", code: "GR", emoji: "🇬🇷" },
+      { name: "Hungary", code: "HU", emoji: "🇭🇺" },
+      { name: "Iceland", code: "IS", emoji: "🇮🇸" },
+      { name: "Italy", code: "IT", emoji: "🇮🇹" },
+      { name: "Latvia", code: "LV", emoji: "🇱🇻" },
+      { name: "Liechtenstein", code: "LI", emoji: "🇱🇮" },
+      { name: "Lithuania", code: "LT", emoji: "🇱🇹" },
+      { name: "Luxembourg", code: "LU", emoji: "🇱🇺" },
+      { name: "Malta", code: "MT", emoji: "🇲🇹" },
+      { name: "Netherlands", code: "NL", emoji: "🇳🇱" },
+      { name: "Norway", code: "NO", emoji: "🇳🇴" },
+      { name: "Poland", code: "PL", emoji: "🇵🇱" },
+      { name: "Portugal", code: "PT", emoji: "🇵🇹" },
+      { name: "Slovakia", code: "SK", emoji: "🇸🇰" },
+      { name: "Slovenia", code: "SI", emoji: "🇸🇮" },
+      { name: "Spain", code: "ES", emoji: "🇪🇸" },
+      { name: "Sweden", code: "SE", emoji: "🇸🇪" },
+      { name: "Switzerland", code: "CH", emoji: "🇨🇭" },
+      
+      // Visa-free for Italian passport
+      { name: "Albania", code: "AL", emoji: "🇦🇱" },
+      { name: "Andorra", code: "AD", emoji: "🇦🇩" },
+      { name: "Argentina", code: "AR", emoji: "🇦🇷" },
+      { name: "Australia", code: "AU", emoji: "🇦🇺" },
+      { name: "Brazil", code: "BR", emoji: "🇧🇷" },
+      { name: "Canada", code: "CA", emoji: "🇨🇦" },
+      { name: "Chile", code: "CL", emoji: "🇨🇱" },
+      { name: "Colombia", code: "CO", emoji: "🇨🇴" },
+      { name: "Costa Rica", code: "CR", emoji: "🇨🇷" },
+      { name: "Dominican Republic", code: "DO", emoji: "🇩🇴" },
+      { name: "Georgia", code: "GE", emoji: "🇬🇪" },
+      { name: "Hong Kong", code: "HK", emoji: "🇭🇰" },
+      { name: "Israel", code: "IL", emoji: "🇮🇱" },
+      { name: "Japan", code: "JP", emoji: "🇯🇵" },
+      { name: "Malaysia", code: "MY", emoji: "🇲🇾" },
+      { name: "Mexico", code: "MX", emoji: "🇲🇽" },
+      { name: "Monaco", code: "MC", emoji: "🇲🇨" },
+      { name: "Montenegro", code: "ME", emoji: "🇲🇪" },
+      { name: "New Zealand", code: "NZ", emoji: "🇳🇿" },
+      { name: "North Macedonia", code: "MK", emoji: "🇲🇰" },
+      { name: "Panama", code: "PA", emoji: "🇵🇦" },
+      { name: "Peru", code: "PE", emoji: "🇵🇪" },
+      { name: "San Marino", code: "SM", emoji: "🇸🇲" },
+      { name: "Serbia", code: "RS", emoji: "🇷🇸" },
+      { name: "Singapore", code: "SG", emoji: "🇸🇬" },
+      { name: "South Africa", code: "ZA", emoji: "🇿🇦" },
+      { name: "South Korea", code: "KR", emoji: "🇰🇷" },
+      { name: "Thailand", code: "TH", emoji: "🇹🇭" },
+      { name: "Turkey", code: "TR", emoji: "🇹🇷" },
+      { name: "United Arab Emirates", code: "AE", emoji: "🇦🇪" },
+      { name: "United Kingdom", code: "GB", emoji: "🇬🇧" },
+      { name: "United States", code: "US", emoji: "🇺🇸" },
+      { name: "Uruguay", code: "UY", emoji: "🇺🇾" },
+      { name: "Vatican City", code: "VA", emoji: "🇻🇦" }
+    ];
+
+    // 4:3 Aspect Ratio
+    const canvasWidth = Math.min(600, window.innerWidth - 40);
+    const canvasHeight = Math.min(450, window.innerHeight - 200);
+    
+    const canvas = document.getElementById("gameCanvas");
+    const startButton = document.getElementById("startButton");
+    const country1Input = document.getElementById("country1");
+    const country2Input = document.getElementById("country2");
+    const country1List = document.getElementById("country1-list");
+    const country2List = document.getElementById("country2-list");
+    const errorMessage = document.getElementById("errorMessage");
+    const loadingMessage = document.getElementById("loadingMessage");
+    const gameTitle = document.getElementById("gameTitle");
+    const speedDisplay = document.getElementById("speedDisplay");
+    const endScreen = document.getElementById("endScreen");
+    const endMessage = document.getElementById("endMessage");
+    const restartButton = document.getElementById("restartButton");
+    
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    const ctx = canvas.getContext("2d");
+
+    const hitSound = document.getElementById("hitSound");
+    const explosionSound = document.getElementById("explosionSound");
+    const healSound = document.getElementById("healSound");
+
+    const MAX_HP = 5;
+    const MIN_ITEM_DISTANCE = 80;
+    const BASE_SPEED = 2;
+    const MAX_SPEED = 6;
+    const SPEED_INCREMENT = 0.1; // Kleinere Inkremente für sanftere Erhöhung
+    const SPEED_DECREMENT = 1; // Speed reduziert sich um 1 bei Spike-Kollision
+    const SPEED_INCREASE_INTERVAL = 1000; // Alle 1 Sekunde erhöhen
+    const SPEED_RAMP_DURATION = 40000; // 40 Sekunden bis Maximalgeschwindigkeit
+    const SPEED_RECOVERY_DURATION = 30000; // 30 Sekunden Erholung
+
+    const ballRadius = 35;
+    const spikeLength = 16;
+    
+    const ball1 = {
+      x: canvasWidth * 0.25,
+      y: canvasHeight * 0.5, 
+      vx: BASE_SPEED, 
+      vy: BASE_SPEED * 0.75, 
+      radius: ballRadius,
+      img: new Image(), 
+      hp: MAX_HP,
+      exploded: false, 
+      canDealDamage: false,
+      hasSpikes: false, 
+      scale: 1,
+      mass: 1,
+      color: "#0055ff",
+      spikeRotation: 0
+    };
+
+    const ball2 = {
+      x: canvasWidth * 0.75,
+      y: canvasHeight * 0.5, 
+      vx: -BASE_SPEED, 
+      vy: -BASE_SPEED * 0.75, 
+      radius: ballRadius,
+      img: new Image(), 
+      hp: MAX_HP,
+      exploded: false, 
+      canDealDamage: false,
+      hasSpikes: false, 
+      scale: 1,
+      mass: 1,
+      color: "#ff5555",
+      spikeRotation: 0
+    };
+
+    let item = null;
+    let lastDamageTime = 0;
+    let selectedCountry1 = null;
+    let selectedCountry2 = null;
+    let flagsPreloaded = false;
+    let currentSpeed = BASE_SPEED;
+    let gameSpeedMultiplier = 1;
+    let gameActive = true;
+    let speedIncreaseInterval;
+    let speedRampStartTime;
+    let speedDecreaseTime = 0;
+
+    function initCountryLists() {
+      countries.forEach(country => {
+        const option1 = document.createElement("div");
+        option1.className = "country-option";
+        option1.textContent = `${country.emoji} ${country.name}`;
+        option1.addEventListener("click", () => {
+          country1Input.value = country.name;
+          selectedCountry1 = country;
+          filterCountries(country1Input.value, country1List);
+        });
+        
+        const option2 = document.createElement("div");
+        option2.className = "country-option";
+        option2.textContent = `${country.emoji} ${country.name}`;
+        option2.addEventListener("click", () => {
+          country2Input.value = country.name;
+          selectedCountry2 = country;
+          filterCountries(country2Input.value, country2List);
+        });
+        
+        country1List.appendChild(option1);
+        country2List.appendChild(option2);
+      });
+      
+      selectedCountry1 = countries.find(c => c.name === "Italy");
+      selectedCountry2 = countries.find(c => c.name === "France");
+      
+      country1Input.addEventListener("input", () => filterCountries(country1Input.value, country1List));
+      country2Input.addEventListener("input", () => filterCountries(country2Input.value, country2List));
+    }
+    
+    function filterCountries(query, listElement) {
+      const queryLower = query.toLowerCase();
+      const options = listElement.children;
+      
+      for (let i = 0; i < options.length; i++) {
+        const option = options[i];
+        const countryName = option.textContent.toLowerCase();
+        option.style.display = countryName.includes(queryLower) ? "block" : "none";
+      }
+    }
+
+    function getFlagUrl(country) {
+      if (!country) return null;
+      return `https://flagcdn.com/w320/${country.code.toLowerCase()}.png`;
+    }
+
+    function preloadFlags() {
+      loadingMessage.style.display = "block";
+      startButton.disabled = true;
+      
+      const flagPromises = countries.map(country => {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(true);
+          img.onerror = () => resolve(false);
+          img.src = getFlagUrl(country);
+        });
+      });
+      
+      Promise.all(flagPromises).then(results => {
+        const successCount = results.filter(success => success).length;
+        if (successCount < countries.length) {
+          errorMessage.style.display = "block";
+        }
+        flagsPreloaded = true;
+        loadingMessage.style.display = "none";
+        startButton.disabled = false;
+      });
+    }
+
+    function startGame() {
+      if (!flagsPreloaded) return;
+      
+      const country1 = selectedCountry1 || countries.find(c => c.name === "Italy");
+      const country2 = selectedCountry2 || countries.find(c => c.name === "France");
+      
+      document.getElementById("country1-label").textContent = `${country1.emoji} ${country1.name}`;
+      document.getElementById("country2-label").textContent = `${country2.emoji} ${country2.name}`;
+      gameTitle.textContent = `${country1.name} vs ${country2.name}`;
+      
+      ball1.img.src = getFlagUrl(country1);
+      ball2.img.src = getFlagUrl(country2);
+      
+      ball1.color = getRandomColor();
+      ball2.color = getRandomColor();
+      
+      document.querySelector('.setup-screen').style.display = 'none';
+      document.querySelectorAll('.hp-container').forEach(el => el.style.display = 'flex');
+      gameTitle.style.display = 'block';
+      canvas.style.display = 'block';
+      speedDisplay.style.display = 'block';
+      endScreen.style.display = 'none';
+      
+      resetGame();
+      gameActive = true;
+      
+      // Starte Geschwindigkeitserhöhung
+      startSpeedRamp();
+      update();
+    }
+    
+    function getRandomColor() {
+      const colors = ['#FF5252', '#FF4081', '#E040FB', '#7C4DFF', '#536DFE', 
+                     '#448AFF', '#40C4FF', '#18FFFF', '#64FFDA', '#69F0AE',
+                     '#B2FF59', '#EEFF41', '#FFFF00', '#FFD740', '#FFAB40'];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+    
+    function resetGame() {
+      ball1.x = canvasWidth * 0.25;
+      ball1.y = canvasHeight * 0.5;
+      ball1.hp = MAX_HP;
+      ball1.exploded = false;
+      ball1.canDealDamage = false;
+      ball1.hasSpikes = false;
+      ball1.vx = BASE_SPEED * gameSpeedMultiplier;
+      ball1.vy = BASE_SPEED * 0.75 * gameSpeedMultiplier;
+      
+      ball2.x = canvasWidth * 0.75;
+      ball2.y = canvasHeight * 0.5;
+      ball2.hp = MAX_HP;
+      ball2.exploded = false;
+      ball2.canDealDamage = false;
+      ball2.hasSpikes = false;
+      ball2.vx = -BASE_SPEED * gameSpeedMultiplier;
+      ball2.vy = -BASE_SPEED * 0.75 * gameSpeedMultiplier;
+      
+      currentSpeed = BASE_SPEED;
+      gameSpeedMultiplier = 1;
+      
+      spawnItem("damage");
+      updateHPBars();
+      updateSpeedDisplay();
+      
+      // Clear previous interval if exists
+      if (speedIncreaseInterval) {
+        clearInterval(speedIncreaseInterval);
+      }
+    }
+
+    function startSpeedRamp() {
+      speedRampStartTime = Date.now();
+      speedIncreaseInterval = setInterval(() => {
+        const elapsed = Date.now() - speedRampStartTime;
+        const timeSinceDecrease = Date.now() - speedDecreaseTime;
+        
+        // Wenn wir innerhalb der Erholungsphase sind nach einer Speed-Reduktion
+        if (speedDecreaseTime > 0 && timeSinceDecrease < SPEED_RECOVERY_DURATION) {
+          const recoveryProgress = timeSinceDecrease / SPEED_RECOVERY_DURATION;
+          const targetSpeed = Math.min(MAX_SPEED, BASE_SPEED + (MAX_SPEED - BASE_SPEED) * recoveryProgress);
+          setSpeed(targetSpeed);
+        } 
+        // Normale Geschwindigkeitserhöhung
+        else if (elapsed < SPEED_RAMP_DURATION) {
+          const progress = elapsed / SPEED_RAMP_DURATION;
+          const targetSpeed = BASE_SPEED + (MAX_SPEED - BASE_SPEED) * progress;
+          setSpeed(targetSpeed);
+        } 
+        // Halte Maximalgeschwindigkeit
+        else {
+          setSpeed(MAX_SPEED);
+        }
+      }, SPEED_INCREASE_INTERVAL);
+    }
+
+    function setSpeed(targetSpeed) {
+      if (currentSpeed === targetSpeed) return;
+      
+      currentSpeed = Math.max(BASE_SPEED, Math.min(MAX_SPEED, targetSpeed));
+      gameSpeedMultiplier = currentSpeed / BASE_SPEED;
+      
+      [ball1, ball2].forEach(ball => {
+        const directionX = Math.sign(ball.vx);
+        const directionY = Math.sign(ball.vy);
+        ball.vx = directionX * currentSpeed;
+        ball.vy = directionY * currentSpeed * 0.75;
+      });
+      
+      updateSpeedDisplay();
+    }
+
+    function showEndScreen(winner) {
+      gameActive = false;
+      clearInterval(speedIncreaseInterval);
+      endMessage.textContent = `${winner.emoji} ${winner.name} won!`;
+      endScreen.style.display = 'flex';
+    }
+
+    function updateSpeedDisplay() {
+      speedDisplay.textContent = `Speed: ${currentSpeed.toFixed(1)}`;
+    }
+
+    function decreaseSpeed() {
+      speedDecreaseTime = Date.now();
+      setSpeed(Math.max(BASE_SPEED, currentSpeed - SPEED_DECREMENT));
+      createEffect(canvasWidth/2, canvasHeight/2, "Speed -", "orange");
+    }
+
+    function spawnItem(type = null) {
+      // Nur ein neues Item spawnen, wenn kein aktuelles existiert
+      if (item) return;
+
+      const types = ["damage", "heal", "harm"];
+      const itemType = type || types[Math.floor(Math.random() * types.length)];
+      
+      let x, y;
+      let attempts = 0;
+      const maxAttempts = 50;
+      
+      do {
+        x = canvasWidth * 0.3 + Math.random() * (canvasWidth * 0.4);
+        y = canvasHeight * 0.2 + Math.random() * (canvasHeight * 0.6);
+        attempts++;
+        
+        const distToBall1 = Math.sqrt((x - ball1.x) ** 2 + (y - ball1.y) ** 2);
+        const distToBall2 = Math.sqrt((x - ball2.x) ** 2 + (y - ball2.y) ** 2);
+        
+        if (attempts >= maxAttempts || (distToBall1 > MIN_ITEM_DISTANCE && distToBall2 > MIN_ITEM_DISTANCE)) {
+          break;
+        }
+      } while (true);
+      
+      item = {
+        x: x,
+        y: y,
+        radius: 18,
+        type: itemType,
+        collected: false
+      };
+    }
+
+    function createEffect(x, y, text, color) {
+      const effect = document.createElement("div");
+      effect.className = "effect";
+      effect.textContent = text;
+      effect.style.color = color;
+      effect.style.left = (x + canvas.offsetLeft - 20) + "px";
+      effect.style.top = (y + canvas.offsetTop - 30) + "px";
+      document.body.appendChild(effect);
+      
+      setTimeout(() => {
+        effect.remove();
+      }, 1000);
+    }
+
+    function updateHPBars() {
+      document.querySelector("#hp-country1 .hp-fill").style.width = (ball1.hp / MAX_HP * 100) + "%";
+      document.querySelector("#hp-country2 .hp-fill").style.width = (ball2.hp / MAX_HP * 100) + "%";
+    }
+
+    function drawItem() {
+      if (!item || item.collected) return;
+
+      ctx.beginPath();
+      ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
+      ctx.lineWidth = 4;
+      if (item.type === "damage") ctx.strokeStyle = "red";
+      else if (item.type === "heal") ctx.strokeStyle = "limegreen";
+      else ctx.strokeStyle = "purple";
+      ctx.stroke();
+
+      ctx.fillStyle = "white";
+      ctx.font = "bold 16px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const label = item.type === "damage" ? "POWERUP" : item.type === "heal" ? "+1HP" : "-1HP";
+      ctx.fillText(label, item.x, item.y);
+    }
+
+    function drawSpikes(x, y, radius, rotation) {
+      const spikeCount = 12;
+      
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
+      
+      for (let i = 0; i < spikeCount; i++) {
+        const angle = (i / spikeCount) * Math.PI * 2;
+        const startX = Math.cos(angle) * radius;
+        const startY = Math.sin(angle) * radius;
+        const endX = Math.cos(angle) * (radius + spikeLength);
+        const endY = Math.sin(angle) * (radius + spikeLength);
+        
+        // Spike mit 3D-Effekt
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.lineWidth = 3;
+        
+        // Farbverlauf für 3D-Effekt
+        const gradient = ctx.createLinearGradient(startX, startY, endX, endY);
+        gradient.addColorStop(0, '#888');
+        gradient.addColorStop(1, '#555');
+        ctx.strokeStyle = gradient;
+        ctx.stroke();
+        
+        // Spike-Spitze
+        ctx.beginPath();
+        ctx.arc(endX, endY, 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#333';
+        ctx.fill();
+      }
+      
+      ctx.restore();
+    }
+
+    function drawBall(ball) {
+      if (ball.hp <= 0 && !ball.exploded) {
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius + 10, 0, Math.PI * 2);
+        ctx.fillStyle = "red";
+        ctx.fill();
+        explosionSound.play();
+        createEffect(ball.x, ball.y, "💥", "red");
+        ball.exploded = true;
+        
+        // Gewinner ermitteln
+        const winner = ball === ball1 ? 
+          (selectedCountry2 || countries.find(c => c.name === "France")) : 
+          (selectedCountry1 || countries.find(c => c.name === "Italy"));
+        setTimeout(() => showEndScreen(winner), 1000);
+        return;
+      }
+      
+      // Zeichne perfekt runde Flagge mit Clipping
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+      ctx.clip();
+      
+      try {
+        if (ball.img.complete && ball.img.naturalWidth !== 0) {
+          // Flagge so skalieren, dass sie den Kreis vollständig ausfüllt
+          const flagRatio = ball.img.width / ball.img.height;
+          let flagWidth, flagHeight;
+          
+          if (flagRatio > 1) {
+            flagWidth = ball.radius * 2;
+            flagHeight = flagWidth / flagRatio;
+          } else {
+            flagHeight = ball.radius * 2;
+            flagWidth = flagHeight * flagRatio;
+          }
+          
+          ctx.drawImage(ball.img, 
+            ball.x - flagWidth/2, ball.y - flagHeight/2, 
+            flagWidth, flagHeight);
+        } else {
+          ctx.fillStyle = ball.color;
+          ctx.beginPath();
+          ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } catch (e) {
+        ctx.fillStyle = ball.color;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      if (ball.hasSpikes) {
+        ball.spikeRotation += 0.03; // Langsamere Rotation
+        drawSpikes(ball.x, ball.y, ball.radius, ball.spikeRotation);
+      }
+      
+      // Ballumriss für bessere Sichtbarkeit
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function animateHit(ball, type) {
+      ball.scale = 1.2;
+      setTimeout(() => ball.scale = 1, 150);
+      
+      if (type === "heal") {
+        createEffect(ball.x, ball.y, "+1 HP", "limegreen");
+        healSound.play();
+      } else if (type === "harm") {
+        createEffect(ball.x, ball.y, "-1 HP", "red");
+        hitSound.play();
+      }
+    }
+
+    function checkItemCollection(ball) {
+      if (!item || item.collected) return;
+
+      const dx = ball.x - item.x;
+      const dy = ball.y - item.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < ball.radius + item.radius) {
+        item.collected = true;
+        
+        if (item.type === "damage") {
+          ball.canDealDamage = true;
+          ball.hasSpikes = true;
+          ball.spikeRotation = 0;
+          // Item sofort entfernen
+          item = null;
+          // Neues Item nach Verzögerung spawnen
+          setTimeout(() => spawnItem(), 800);
+        } else if (item.type === "heal") {
+          ball.hp = Math.min(MAX_HP, ball.hp + 1);
+          animateHit(ball, "heal");
+          updateHPBars();
+          // Item sofort entfernen
+          item = null;
+          // Neues Item nach Verzögerung spawnen
+          setTimeout(() => spawnItem(), 800);
+        } else if (item.type === "harm") {
+          ball.hp = Math.max(0, ball.hp - 1);
+          animateHit(ball, "harm");
+          updateHPBars();
+          // Item sofort entfernen
+          item = null;
+          // Neues Item nach Verzögerung spawnen
+          setTimeout(() => spawnItem(), 800);
+        }
+      }
+    }
+
+    function resolveCollision(b1, b2) {
+      const dx = b2.x - b1.x;
+      const dy = b2.y - b1.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      const overlap = (b1.radius + b2.radius - distance) / 2;
+      
+      if (distance === 0) return;
+      
+      const nx = dx / distance;
+      const ny = dy / distance;
+      
+      b1.x -= overlap * nx;
+      b1.y -= overlap * ny;
+      b2.x += overlap * nx;
+      b2.y += overlap * ny;
+      
+      const relativeVelocityX = b2.vx - b1.vx;
+      const relativeVelocityY = b2.vy - b1.vy;
+      
+      const impulse = (relativeVelocityX * nx + relativeVelocityY * ny);
+      
+      if (impulse > 0) return;
+      
+      const restitution = 0.9;
+      const j = -(1 + restitution) * impulse / (1 / b1.mass + 1 / b2.mass);
+      
+      const impulseX = j * nx;
+      const impulseY = j * ny;
+      
+      b1.vx -= impulseX / b1.mass;
+      b1.vy -= impulseY / b1.mass;
+      b2.vx += impulseX / b2.mass;
+      b2.vy += impulseY / b2.mass;
+    }
+
+    function checkCollision() {
+      const dx = ball1.x - ball2.x;
+      const dy = ball1.y - ball2.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < ball1.radius + ball2.radius) {
+        resolveCollision(ball1, ball2);
+
+        const now = Date.now();
+        if ((ball1.canDealDamage || ball2.canDealDamage) && now - lastDamageTime > 800) {
+          let damaged = false;
+          if (ball1.canDealDamage && ball2.hp > 0) {
+            ball2.hp = Math.max(0, ball2.hp - 1);
+            ball1.canDealDamage = false;
+            ball1.hasSpikes = false;
+            damaged = true;
+            createEffect(ball2.x, ball2.y, "-1 HP", "red");
+            decreaseSpeed();
+          }
+          if (ball2.canDealDamage && ball1.hp > 0) {
+            ball1.hp = Math.max(0, ball1.hp - 1);
+            ball2.canDealDamage = false;
+            ball2.hasSpikes = false;
+            damaged = true;
+            createEffect(ball1.x, ball1.y, "-1 HP", "red");
+            decreaseSpeed();
+          }
+
+          if (damaged) {
+            hitSound.play();
+            updateHPBars();
+            lastDamageTime = now;
+          }
+        }
+      }
+    }
+
+    function checkWallCollision(ball) {
+      if (ball.x < ball.radius || ball.x > canvas.width - ball.radius) {
+        ball.vx *= -1;
+      }
+      if (ball.y < ball.radius || ball.y > canvas.height - ball.radius) {
+        ball.vy *= -1;
+      }
+    }
+
+    function update() {
+      if (!gameActive) return;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (ball1.hp > 0 && ball2.hp > 0) {
+        ball1.x += ball1.vx;
+        ball1.y += ball1.vy;
+        ball2.x += ball2.vx;
+        ball2.y += ball2.vy;
+
+        checkWallCollision(ball1);
+        checkWallCollision(ball2);
+
+        checkCollision();
+        checkItemCollection(ball1);
+        checkItemCollection(ball2);
+      }
+
+      drawItem();
+      drawBall(ball1);
+      drawBall(ball2);
+
+      requestAnimationFrame(update);
+    }
+
+    // Spiel initialisieren
+    initCountryLists();
+    preloadFlags();
+    
+    startButton.addEventListener("click", startGame);
+    restartButton.addEventListener("click", startGame);
+    
+    [country1Input, country2Input].forEach(input => {
+      input.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          startGame();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
